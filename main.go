@@ -1,4 +1,4 @@
-package main
+package faultTolerant
 
 import (
 	"errors"
@@ -18,6 +18,15 @@ type Machine struct {
 	LaunchDate int64
 }
 
+type Bits struct {
+	Delta int
+	Mac   int
+	Callback int
+	Sequence int
+	Host string
+	DB string
+}
+
 var (
 	startTime int64   // 启动时间
 	lastTime  int64   // 最后一次调用时间
@@ -25,12 +34,7 @@ var (
 	sequence  int64   // 并发自增数
 	callback  int64   // 时间回拨次数
 	running   int32   // 是否有任务
-	//collate sync.Map
-
-	BITS = []int{41, 9, 3, 10} // 增量时间41 机器ID9 时间回拨次数3 递增序列10
-
-	server = ":12138" // ip:端口
-	databaseInfo = "账号:密码@tcp(127.0.0.1:3306)/数据库?charset=utf8&parseTime=True&loc=Local" // Mysql数据库
+	bits Bits
 )
 
 func init() {
@@ -55,19 +59,21 @@ func GeneralID() (int64, error) {
 		lastTime = now
 	}
 
-	if delta >= 1 << BITS[0] {
-		return -1, errors.New(fmt.Sprintf("delta time is out of 2^%d", BITS[0]))
-	} else if callback >= 1 << 3 {
-		return -1, errors.New(fmt.Sprintf("callback times is out of 2^%d", BITS[2]))
-	} else if sequence >= 1 << 10 {
-		return -1, errors.New(fmt.Sprintf("sequence number is out of 2^%d", BITS[3]))
+	if delta >= 1 << bits.Delta {
+		return -1, errors.New(fmt.Sprintf("delta time is out of 2^%d", bits.Delta))
+	} else if callback >= 1 << bits.Callback {
+		return -1, errors.New(fmt.Sprintf("callback times is out of 2^%d", bits.Callback))
+	} else if sequence >= 1 << bits.Sequence {
+		return -1, errors.New(fmt.Sprintf("sequence number is out of 2^%d", bits.Sequence))
 	}
 
-	return delta << (BITS[3] + BITS[2] + BITS[1]) + machine.ID << (BITS[3] + BITS[2]) + callback << BITS[3] + sequence, nil
+	return delta << (bits.Mac + bits.Callback + bits.Sequence) +
+		machine.ID << (bits.Callback + bits.Sequence) +
+		callback << bits.Sequence + sequence, nil
 }
 
 func initMachine() error {
-	db, err := gorm.Open("mysql", databaseInfo)
+	db, err := gorm.Open("mysql", bits.DB)
 	if err != nil {
 		return err
 	}
@@ -87,16 +93,6 @@ func getID(c *gin.Context) {
 		log.Println(err.Error())
 	}
 
-	//if id == -1 {
-	//	log.Println(id)
-	//}
-	//
-	//if id != -1 {
-	//	if v, ok := collate.LoadOrStore(id, true); ok {
-	//		log.Println(id, v)
-	//	}
-	//}
-
 	c.JSON(200, gin.H{"id": id})
 }
 
@@ -106,19 +102,23 @@ func router() *gin.Engine {
 	return route
 }
 
-func main() {
-	if err := initMachine(); err != nil {
-		log.Fatal(err.Error())
-		return
+func Run(param Bits) error {
+	if param.Delta + param.Mac + param.Callback + param.Sequence != 63 {
+		return errors.New("please don't embarrass me")
 	}
-	if machine.ID > 512 {
-		log.Fatal(fmt.Sprintf("Machine id (%d) is out of limited(%d)", machine.ID, BITS[1]))
-		return
+
+	bits = param
+
+	if err := initMachine(); err != nil {
+		return err
+	}
+	if machine.ID > 1 << bits.Mac {
+		return errors.New(fmt.Sprintf("machine id (%d) is out of limited(%d)", machine.ID, bits.Mac))
 	}
 
 	route := router()
-	if err := route.Run(server); err != nil {
-		log.Fatal(err.Error())
-		return
+	if err := route.Run(bits.Host); err != nil {
+		return err
 	}
+	return nil
 }
