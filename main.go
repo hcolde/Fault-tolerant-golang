@@ -48,12 +48,11 @@ func GeneralID() (int64, error) {
 	if now == lastTime { // 并发
 		sequence++
 	} else {
-		sequence = 0
-		lastTime = now
-
 		if now < lastTime { // 时间回拨
 			callback++
 		}
+		sequence = 0
+		lastTime = now
 	}
 
 	if delta >= 1 << BITS[0] {
