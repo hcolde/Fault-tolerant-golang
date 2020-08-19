@@ -43,7 +43,19 @@ go get github.com/hcolde/fault-tolerant
 
 
 
-3. 例子
+3. 在数据库执行以下语句创建数据表
+
+```mysql
+CREATE TABLE IF NOT EXISTS `machine` (
+    `id` INT PRIMARY KEY AUTO_INCREMENT,
+    `name` VARCHAR(256) NOT NULL COMMENT '机器名',
+    `launch_date` INT NOT NULL COMMENT '启动时间'
+) ENGINE = InnoDB AUTO_INCREMENT = 0 DEFAULT CHARSET = utf8mb4;
+```
+
+
+
+4. 例子
 
 ```go
 package main
