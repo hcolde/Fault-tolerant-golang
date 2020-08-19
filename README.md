@@ -26,3 +26,46 @@
 
 **以上参数均可根据实际项目需求自定义**
 
+## 使用
+
+1. 该项目依赖于以下项目
+
+* [Gin](https://github.com/gin-gonic/gin)
+* [GORM](https://github.com/go-gorm/gorm)
+
+
+
+2. 安装
+
+```shell
+go get github.com/hcolde/fault-tolerant
+```
+
+
+
+3. 例子
+
+```go
+package main
+
+import (
+	"fmt"
+	ft "github.com/hcolde/fault-tolerant"
+)
+
+func main() {
+	bits := ft.Bits{
+		Delta:    41,
+		Mac:      9,
+		Callback: 3,
+		Sequence: 10,
+		Host: "127.0.0.1:12138",
+		DB: "账号:密码@tcp(IP:端口)/数据库?charset=utf8&parseTime=True&loc=Local",
+	}
+
+	if err := ft.Run(bits); err != nil {
+		fmt.Println(err.Error())
+	}
+}
+```
+
