@@ -112,7 +112,7 @@ func Run(param Bits) error {
 	if err := initMachine(); err != nil {
 		return err
 	}
-	if machine.ID > 1 << bits.Mac {
+	if machine.ID >= 1 << bits.Mac {
 		return errors.New(fmt.Sprintf("machine id (%d) is out of limited(%d)", machine.ID, bits.Mac))
 	}
 
